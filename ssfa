@@ -49,7 +49,7 @@ ggplot(as.data.frame(eff.ssfa(ssfa)), fill = "grey", color = "black") +
   geom_density(aes(x = eff.ssfa(ssfa))) + ggtitle('Distribution of effectiency`s estimations')
 
 
-sfa.ef <- efficiencies(sfa) # efficiency estimators of classic sfa
+sfa.ef <- efficiencies(sfa) # efficiency estimators of classic sfa, see 'sfa' files in order to get this data
 sfa.ef[497] <- NA
 df_sfa <- data.frame(cbind(sfa = sfa.ef, ssfa = as.vector(eff.ssfa(ssfa)) ))
 
