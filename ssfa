@@ -51,11 +51,11 @@ ggplot(as.data.frame(eff.ssfa(ssfa)), fill = "grey", color = "black") +
 
 sfa.ef <- efficiencies(sfa) # efficiency estimators of classic sfa
 sfa.ef[497] <- NA
-df_sfa <- data.frame(cbind(sfa = sfa.ef, ssfa = as.vector(eff.ssfa(ssfa_2)) ))
+df_sfa <- data.frame(cbind(sfa = sfa.ef, ssfa = as.vector(eff.ssfa(ssfa)) ))
 
 data <- melt(df_sfa)
 ggplot(data, aes(x=value, fill=variable)) + geom_density(alpha=0.25)
 
 
 
-mean(eff.ssfa(ssfa_2)[-497] - efficiencies(sfa))
+mean(eff.ssfa(ssfa)[-497] - efficiencies(sfa))
