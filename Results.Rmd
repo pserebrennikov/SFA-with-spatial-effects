@@ -1,0 +1,89 @@
+---
+title: "Results"
+output: 
+  pdf_document:
+    latex_engine: xelatex
+mainfont: Times New Roman
+---
+
+```{r setup, include=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library('Benchmarking')
+library('openxlsx')
+library('dplyr')
+library('ggplot2')
+library('mice')
+library("VIM")
+library('frontier')
+library('stringr')
+```
+
+Результаты оценки классичесой SFA модели через пакет frontier:
+
+```{r, echo=FALSE, warning=FALSE, include=FALSE}
+df_2017.for_sfa <- read.xlsx(xlsxFile = '2017_for_sfa.xlsx')
+
+df_2017.for_sfa$`Общий.объем.научно.исследовательских.и.опытно.конструкторских.работ..далее...НИОКР` <- 
+  str_replace_all(df_2017.for_sfa$`Общий.объем.научно.исследовательских.и.опытно.конструкторских.работ..далее...НИОКР`,
+                ' ', '')
+for (i in 4:ncol(df_2017.for_sfa)) 
+  df_2017.for_sfa[,i] <- as.numeric(as.character(df_2017.for_sfa[,i]))
+
+outlier <- function(x) {
+  qnt <- quantile(x, probs=c(.25,.75), na.rm=TRUE)
+  caps <- quantile(x, probs=c(.05,.95), na.rm=TRUE)
+  H <- 3 * IQR(x, na.rm = T)
+  y <- x
+  y[x < (qnt[1] - H)] <- caps[1]
+  y[x > (qnt[2] + H)] <- caps[2]
+  return(y)
+}
+
+
+for (i in 4:ncol(df_2017.for_sfa)) 
+  df_2017.for_sfa[,i] <- outlier(df_2017.for_sfa[,i])
+
+
+# sfa
+X <- with(df_2017.for_sfa, 
+          cbind(mean_EGE = `Средний.балл.ЕГЭ.студентов..принятых.по.результатам.ЕГЭ.на.обучение.по.очной.форме.по.программам.бакалавриата.и.специалитета.за.счет.средств.соответствующих.бюджетов.бюджетной.системы.РФ` / `Доходы.вуза.из.всех.источников`,
+                nums_of_NPR = `Общая.численность.НПР` / `Доходы.вуза.из.всех.источников`,
+                Nums_of_publications = `Общее.количество.публикаций`,
+                Priv_cont = `Приведенный.контингент`,
+                NIOKR = `Общий.объем.научно.исследовательских.и.опытно.конструкторских.работ..далее...НИОКР`))
+
+impute_X <- mice(X)
+X <- complete(impute_X,1)
+
+replace_zero <- function(vec){
+  
+  for(i in 1:length(vec)){
+    if(vec[i] == 0)
+      vec[i] = 1e-04
+  }
+  return(vec)
+}
+
+X$NIOKR <- replace_zero(X$NIOKR)
+
+X <- data.frame(cbind(X, Income_of_univ = df_2017.for_sfa$`Доходы.вуза.из.всех.источников`))
+
+dist_1 <- sfa(data = X, -log(Income_of_univ) ~ log(mean_EGE) + log(nums_of_NPR) + 
+                                               log(Nums_of_publications) + log(Priv_cont) +
+                                               log(NIOKR))
+#summary(dist_1)
+```
+
+```{r, echo=FALSE}
+summary(dist_1)
+```
+
+Распределение оценок эффективности. Как по мне, слишком высоки.
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE}
+#hist(efficiencies(dist_1))
+ggplot(as.data.frame(efficiencies(dist_1)), fill = "grey", color = "black") + 
+  geom_histogram(aes(x = efficiencies(dist_1))) + ggtitle('Distribution of effectiency`s estimations')
+
+```
+
